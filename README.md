@@ -27,6 +27,13 @@ Windows is doing. DISM, SFC, and CHKDSK report numeric progress; tools that do
 not expose a percentage use an animated working indicator. Repair buttons are
 temporarily locked to prevent two repairs from running at the same time.
 
+After a full scan, **Fix all safe issues** runs every applicable built-in repair
+in one sequence. It creates a restore point when available and can repair
+Windows files, scan the disk, rescan devices, restore update services, enable
+Defender, and reset networking. Hardware replacement, low-space cleanup,
+third-party driver installation, and application removal remain manual so the
+button cannot make unsafe guesses or delete personal data.
+
 ## What it checks
 
 - Windows version, activation/licensing service, pending restart, and uptime

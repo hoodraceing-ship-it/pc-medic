@@ -39,7 +39,7 @@ $xaml = @'
     <Border Grid.Row="1" Margin="0,18,0,14" Padding="18" CornerRadius="6" Background="#20262D" BorderBrush="#343C45" BorderThickness="1">
       <Grid><Grid.ColumnDefinitions><ColumnDefinition/><ColumnDefinition Width="Auto"/></Grid.ColumnDefinitions>
         <StackPanel><TextBlock Name="StatusTitle" Text="Ready to examine this PC" FontSize="19" FontWeight="SemiBold"/><TextBlock Name="StatusDetail" Text="The full scan is read-only and normally takes 3-10 minutes." Margin="0,5,0,0" Foreground="#94A3B8"/></StackPanel>
-        <StackPanel Grid.Column="1" Orientation="Horizontal"><Button Name="ScanButton" Content="Run full scan"/><Button Name="ExportButton" Content="Export report" Background="#0F766E" IsEnabled="False"/></StackPanel>
+        <StackPanel Grid.Column="1" Orientation="Horizontal"><Button Name="ScanButton" Content="Run full scan"/><Button Name="FixAllButton" Content="Fix all safe issues" Background="#1D8A55" IsEnabled="False"/><Button Name="ExportButton" Content="Export report" Background="#0F766E" IsEnabled="False"/></StackPanel>
       </Grid>
     </Border>
     <TabControl Name="MainTabs" Grid.Row="2" Background="#15191E" BorderBrush="#343C45" Foreground="#E5E9ED">
@@ -64,7 +64,7 @@ $xaml = @'
 
 $reader = New-Object System.Xml.XmlNodeReader ([xml]$xaml)
 $window = [Windows.Markup.XamlReader]::Load($reader)
-foreach ($name in @('AdminBadge','StatusTitle','StatusDetail','ScanButton','ExportButton','MainTabs','RepairsTab','ResultsList','IssueTitleText','IssueDetailText','FixSelectedButton','HardwareRefreshButton','HardwareList','CpuUsageText','CpuTempText','RamUsageText','RamDetailText','GpuUsageText','GpuTempText','DiskUsageText','DiskDetailText','RestoreButton','SystemRepairButton','DiskRepairButton','NetworkRepairButton','MemoryButton','UpdateButton','DriversButton','DefenderButton','RepairProgress','RepairStageText','RepairPercentText','RepairDetailText','RepairOutput','VersionText','CheckUpdateButton','PathText','Progress','ProgressText')) { Set-Variable -Name $name -Value $window.FindName($name) -Scope Script }
+foreach ($name in @('AdminBadge','StatusTitle','StatusDetail','ScanButton','FixAllButton','ExportButton','MainTabs','RepairsTab','ResultsList','IssueTitleText','IssueDetailText','FixSelectedButton','HardwareRefreshButton','HardwareList','CpuUsageText','CpuTempText','RamUsageText','RamDetailText','GpuUsageText','GpuTempText','DiskUsageText','DiskDetailText','RestoreButton','SystemRepairButton','DiskRepairButton','NetworkRepairButton','MemoryButton','UpdateButton','DriversButton','DefenderButton','RepairProgress','RepairStageText','RepairPercentText','RepairDetailText','RepairOutput','VersionText','CheckUpdateButton','PathText','Progress','ProgressText')) { Set-Variable -Name $name -Value $window.FindName($name) -Scope Script }
 $PathText.Text = $script:AppRoot
 $VersionText.Text=(Get-Content (Join-Path $PSScriptRoot 'VERSION.txt') -First 1)
 if (-not (Test-Administrator)) { $AdminBadge.Text = 'Limited mode'; $AdminBadge.Foreground = '#FBBF24' }
@@ -186,7 +186,7 @@ function Add-EventGroups([object[]]$Events,[string]$Area,[string]$Status,[string
 function Invoke-FullScan {
     $script:Results.Clear(); $ResultsList.Items.Clear(); $script:ScanStarted=Get-Date
     $IssueTitleText.Text='Scanning for problems'; $IssueDetailText.Text='Results will appear here as each check completes.'; $FixSelectedButton.IsEnabled=$false
-    $ScanButton.IsEnabled=$false; $ExportButton.IsEnabled=$false; $StatusTitle.Text='Scanning this PC...'
+    $ScanButton.IsEnabled=$false; $FixAllButton.IsEnabled=$false; $ExportButton.IsEnabled=$false; $StatusTitle.Text='Scanning this PC...'
     try {
         Set-Step 5 'Collecting Windows and uptime information...'
         $os=Get-CimInstance Win32_OperatingSystem; $boot=$os.LastBootUpTime; $uptime=((Get-Date)-$boot)
@@ -280,12 +280,12 @@ function Invoke-FullScan {
         $firstProblem=$ResultsList.Items|Where-Object {$_.Status -in @('FAIL','WARN')}|Select-Object -First 1
         if($firstProblem){$ResultsList.SelectedItem=$firstProblem;$ResultsList.ScrollIntoView($firstProblem)}
     } catch { Add-Result 'FAIL' 'Scanner' $_.Exception.Message 'Export the report and rerun as administrator.'; $StatusTitle.Text='Scan stopped by an error' }
-    finally { $ScanButton.IsEnabled=$true; $ExportButton.IsEnabled=($script:Results.Count -gt 0) }
+    finally { $ScanButton.IsEnabled=$true; $FixAllButton.IsEnabled=(@($script:Results|Where-Object {$_.Status -in @('WARN','FAIL')}).Count -gt 0); $ExportButton.IsEnabled=($script:Results.Count -gt 0) }
 }
 
 function Export-Report {
     $stamp=Get-Date -Format 'yyyyMMdd-HHmmss'; $jsonPath=Join-Path $script:ReportRoot "PCMedic-$stamp.json"; $htmlPath=Join-Path $script:ReportRoot "PCMedic-$stamp.html"
-    $payload=[ordered]@{App='PC Medic';Version='1.4.0';Computer=$env:COMPUTERNAME;Started=$script:ScanStarted;Exported=Get-Date;Results=$script:Results}
+    $payload=[ordered]@{App='PC Medic';Version='1.5.0';Computer=$env:COMPUTERNAME;Started=$script:ScanStarted;Exported=Get-Date;Results=$script:Results}
     $payload|ConvertTo-Json -Depth 8|Set-Content $jsonPath -Encoding UTF8
     $rows=foreach($r in $script:Results){'<tr class="'+$r.Status.ToLower()+'"><td>'+[Web.HttpUtility]::HtmlEncode($r.Status)+'</td><td>'+[Web.HttpUtility]::HtmlEncode($r.Area)+'</td><td>'+[Web.HttpUtility]::HtmlEncode($r.Finding)+'</td><td>'+[Web.HttpUtility]::HtmlEncode($r.Recommendation)+'</td></tr>'}
     $html='<!doctype html><meta charset="utf-8"><title>PC Medic Report</title><style>body{font:15px Segoe UI;background:#0b1220;color:#e5e7eb;margin:35px}table{border-collapse:collapse;width:100%;background:#111827}th,td{padding:11px;border:1px solid #334155;text-align:left;vertical-align:top}.pass td:first-child{color:#4ade80}.warn td:first-child{color:#fbbf24}.fail td:first-child{color:#fb7185}.info td:first-child{color:#60a5fa}</style><h1>PC Medic Report</h1><p>'+[Web.HttpUtility]::HtmlEncode($env:COMPUTERNAME)+' - '+(Get-Date)+'</p><table><tr><th>Status</th><th>Area</th><th>Finding</th><th>Recommendation</th></tr>'+($rows-join '')+'</table>'
@@ -301,7 +301,7 @@ function Run-Repair([string]$Name,[string]$Warning,[scriptblock]$Action){
     if(-not(Confirm-Action $Name $Warning)){return}
     $MainTabs.SelectedItem=$RepairsTab
     $RepairOutput.Text="$Name started at $(Get-Date)."
-    $repairButtons=@($RestoreButton,$SystemRepairButton,$DiskRepairButton,$NetworkRepairButton,$MemoryButton,$DefenderButton)
+    $repairButtons=@($FixAllButton,$RestoreButton,$SystemRepairButton,$DiskRepairButton,$NetworkRepairButton,$MemoryButton,$DefenderButton)
     foreach($button in $repairButtons){$button.IsEnabled=$false}
     Set-RepairProgress "Starting $Name" -1 'Preparing the Windows repair tools. Do not close PC Medic.'
     try{$out=&$Action;Set-RepairProgress "$Name complete" 100 'The requested repair finished successfully.';$RepairOutput.Text="$Name completed at $(Get-Date).`n`n$out"}
@@ -309,7 +309,35 @@ function Run-Repair([string]$Name,[string]$Warning,[scriptblock]$Action){
     finally{foreach($button in $repairButtons){$button.IsEnabled=$true}}
 }
 
+function Invoke-FixAllSafeIssues {
+    $problems=@($script:Results | Where-Object {$_.Status -in @('WARN','FAIL')})
+    if(-not $problems.Count){[System.Windows.MessageBox]::Show('Run a full scan first, or there are no warnings or failures to repair.','PC Medic','OK','Information')|Out-Null;return}
+    $systemFix=@($problems|Where-Object Area -eq 'System files').Count -gt 0
+    $diskFix=@($problems|Where-Object {$_.Area -eq 'Storage' -and $_.Finding -match 'disk|controller|NTFS|health|file-system'}).Count -gt 0
+    $driverFix=@($problems|Where-Object {$_.Area -eq 'Drivers' -and $_.Finding -notmatch 'over five years old'}).Count -gt 0
+    $updateFix=@($problems|Where-Object Area -eq 'Updates').Count -gt 0
+    $securityFix=@($problems|Where-Object Area -eq 'Security').Count -gt 0
+    $networkFix=@($problems|Where-Object Area -eq 'Network').Count -gt 0
+    $automaticCount=@(@($systemFix,$diskFix,$driverFix,$updateFix,$securityFix,$networkFix) | Where-Object {$_}).Count
+    if(-not $automaticCount){[System.Windows.MessageBox]::Show('The detected warnings require manual review. PC Medic will not guess at hardware replacement, delete files, or install unknown drivers.','PC Medic','OK','Information')|Out-Null;return}
+    $warning="PC Medic found $automaticCount safe repair group(s). It will create a restore point when possible, then run only the matching Windows repair tools.`n`nNetwork repair may require a restart. PC Medic will not delete personal files, uninstall applications, replace hardware, or install third-party drivers.`n`nContinue?"
+    Run-Repair 'Fix all safe issues' $warning {
+        $log=[System.Collections.Generic.List[string]]::new();$step=0
+        try{Set-RepairProgress 'Creating a safety restore point' 2 'Saving Windows system settings before repairs.';Enable-ComputerRestore -Drive ($env:SystemDrive+'\') -ErrorAction SilentlyContinue;Checkpoint-Computer -Description 'PC Medic - Fix All' -RestorePointType MODIFY_SETTINGS -ErrorAction Stop;$log.Add('Restore point created.')}catch{$log.Add('Restore point was unavailable: '+$_.Exception.Message)}
+        if($systemFix){$step++;Set-RepairProgress "Repair $step of $automaticCount`: Windows files" 5 'DISM is repairing the Windows component store.';$a=Invoke-Native 'dism.exe' '/Online /Cleanup-Image /RestoreHealth /English' {param($p) Set-RepairProgress "Repair $step of $automaticCount`: Windows files" (5+[math]::Round($p*0.35)) ("DISM progress: {0:N1}%" -f $p)};Set-RepairProgress "Repair $step of $automaticCount`: Windows files" 42 'SFC is checking and replacing protected Windows files.';$b=Invoke-Native 'sfc.exe' '/scannow' {param($p) Set-RepairProgress "Repair $step of $automaticCount`: Windows files" (42+[math]::Round($p*0.18)) ("SFC progress: {0:N1}%" -f $p)};$log.Add("DISM exit $($a.ExitCode); SFC exit $($b.ExitCode).")}
+        if($diskFix){$step++;Set-RepairProgress "Repair $step of $automaticCount`: Disk scan" 62 'CHKDSK is checking the Windows drive online.';$r=Invoke-Native 'chkdsk.exe' ($env:SystemDrive+' /scan') {param($p) Set-RepairProgress "Repair $step of $automaticCount`: Disk scan" (62+[math]::Round($p*0.12)) ("CHKDSK progress: {0:N1}%" -f $p)};$log.Add("CHKDSK exit $($r.ExitCode).")}
+        if($driverFix){$step++;Set-RepairProgress "Repair $step of $automaticCount`: Devices" 77 'Windows is rescanning connected hardware and installed drivers.';$r=Invoke-Native 'pnputil.exe' '/scan-devices';$log.Add("Device rescan exit $($r.ExitCode).")}
+        if($updateFix){$step++;Set-RepairProgress "Repair $step of $automaticCount`: Windows Update" 82 'Restoring the Windows Update and transfer services.';foreach($serviceName in @('bits','wuauserv')){try{Set-Service $serviceName -StartupType Manual -ErrorAction Stop;Start-Service $serviceName -ErrorAction SilentlyContinue;$log.Add("$serviceName service restored.")}catch{$log.Add("$serviceName service: "+$_.Exception.Message)}}}
+        if($securityFix){$step++;Set-RepairProgress "Repair $step of $automaticCount`: Windows Security" 88 'Enabling Defender real-time monitoring and starting a quick scan.';try{Set-MpPreference -DisableRealtimeMonitoring $false -ErrorAction Stop;Start-MpScan -ScanType QuickScan -ErrorAction Stop;$log.Add('Defender real-time protection enabled and quick scan completed.')}catch{$log.Add('Defender repair: '+$_.Exception.Message)}}
+        if($networkFix){$step++;Set-RepairProgress "Repair $step of $automaticCount`: Network" 94 'Flushing DNS and resetting Winsock and TCP/IP.';$one=ipconfig /flushdns|Out-String;$two=netsh winsock reset|Out-String;$three=netsh int ip reset|Out-String;$log.Add("Network stack reset. Restart Windows to finish.`n$one`n$two`n$three")}
+        $manual=@($problems|Where-Object {($_.Area -in @('Hardware','Stability','Performance')) -or ($_.Area -eq 'Storage' -and $_.Finding -match 'free|full') -or ($_.Area -eq 'Drivers' -and $_.Finding -match 'over five years old')})
+        if($manual.Count){$log.Add("$($manual.Count) item(s) still require manual review because automatic repair could be unsafe.")}
+        $log -join "`n`n"
+    }
+}
+
 $ScanButton.Add_Click({Invoke-FullScan})
+$FixAllButton.Add_Click({Invoke-FixAllSafeIssues})
 $ExportButton.Add_Click({Export-Report})
 $ResultsList.Add_SelectionChanged({Show-SelectedIssue})
 $FixSelectedButton.Add_Click({Fix-SelectedIssue})

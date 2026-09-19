@@ -1,4 +1,4 @@
-PC Medic 1.4.0
+PC Medic 1.5.0
 Build date: 2026-09-19
 
 Local-first Windows 10/11 diagnostics, hardware inventory, live telemetry,
@@ -18,3 +18,6 @@ activity descriptions, percentages, and clear completion or failure states.
 1.4.0: Expanded Windows event-log diagnostics for application crashes, disk
 and NTFS faults, driver and service failures, Windows Update errors, Defender
 events, and memory-test results, with repeated events grouped by cause.
+1.5.0: Added one-click repair of all safely automatable scan findings, with a
+restore point, matching Windows repair tools, progress stages, and clear
+identification of issues that still require manual review.
