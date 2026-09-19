@@ -1,0 +1,52 @@
+name: Build PC Medic release
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - "*.ps1"
+      - "*.vbs"
+      - "*.cmd"
+      - "README.md"
+      - "VERSION.txt"
+      - ".github/workflows/release.yml"
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  release:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Read version
+        id: version
+        shell: bash
+        run: |
+          version=$(head -n 1 VERSION.txt | grep -oE '[0-9]+\.[0-9]+\.[0-9]+')
+          test -n "$version"
+          echo "version=$version" >> "$GITHUB_OUTPUT"
+
+      - name: Package and checksum
+        shell: bash
+        run: |
+          version='${{ steps.version.outputs.version }}'
+          mkdir -p staging/PCMedic dist
+          cp ./*.ps1 ./*.vbs ./*.cmd README.md VERSION.txt staging/PCMedic/
+          (cd staging && zip -qr "../dist/PC-Medic-${version}.zip" PCMedic)
+          (cd dist && sha256sum "PC-Medic-${version}.zip" > "PC-Medic-${version}.zip.sha256.txt")
+
+      - name: Publish GitHub release
+        env:
+          GH_TOKEN: ${{ github.token }}
+        shell: bash
+        run: |
+          version='${{ steps.version.outputs.version }}'
+          tag="v${version}"
+          if gh release view "$tag" >/dev/null 2>&1; then
+            gh release upload "$tag" dist/* --clobber
+          else
+            gh release create "$tag" dist/* --title "PC Medic ${version}" --generate-notes --latest
+          fi
