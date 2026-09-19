@@ -62,6 +62,7 @@ PC Medic checks `hoodraceing-ship-it/PC-Medic` GitHub Releases once per day.
 The About page also provides a manual check. A release must include a ZIP and
 a `.sha256` or `.sha256.txt` checksum asset. Unverified packages are rejected.
 Reports and logs under `%ProgramData%\PCMedic` are preserved during updates.
+GitHub Actions builds each release ZIP and matching checksum from the source.
 
 ## Repair policy
 
