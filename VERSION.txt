@@ -1,5 +1,5 @@
-PC Medic 1.5.0
-Build date: 2026-09-19
+PC Medic 1.6.0
+Build date: 2026-09-28
 
 Local-first Windows 10/11 diagnostics, hardware inventory, live telemetry,
 reporting, and guided Microsoft-tool repairs.
@@ -21,3 +21,6 @@ events, and memory-test results, with repeated events grouped by cause.
 1.5.0: Added one-click repair of all safely automatable scan findings, with a
 restore point, matching Windows repair tools, progress stages, and clear
 identification of issues that still require manual review.
+1.6.0: Added a gaming stutter recorder that monitors the selected game, CPU,
+GPU load and temperature, clocks, power, VRAM, RAM, paging, disk activity, and
+matching Windows driver or hardware events, then saves and summarizes a report.

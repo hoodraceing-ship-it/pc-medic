@@ -63,6 +63,20 @@ ACPI thermal readings when the motherboard exposes them and uses NVIDIA's
 installed driver utility for NVIDIA GPU temperature, utilization, and VRAM.
 An unavailable temperature is reported honestly rather than estimated.
 
+## Gaming stutter monitor
+
+Start the game, select its process on the Gaming Monitor tab, and record while
+playing. PC Medic samples CPU and game-process load, CPU clock, NVIDIA GPU load,
+temperature, clock, power and VRAM, memory pressure, paging, disk activity and
+queue length once per second. It flags sudden resource spikes and GPU-load
+drops, collects matching Windows display, storage, USB, WHEA and power events,
+then saves the full session as a CSV report under `%ProgramData%\PCMedic\Reports`.
+
+This diagnosis correlates Windows and hardware behavior around a hitch. Exact
+per-frame FPS and frametime capture requires a dedicated ETW tool such as
+Intel PresentMon; PC Medic does not install or inject third-party software into
+games.
+
 ## Updates
 
 PC Medic checks `hoodraceing-ship-it/PC-Medic` GitHub Releases once per day.
