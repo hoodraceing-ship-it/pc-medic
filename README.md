@@ -5,9 +5,12 @@ uses Windows' own servicing and diagnostic tools and does not upload telemetry.
 
 ## Install
 
-1. Extract the ZIP.
-2. Right-click `Install-PCMedic.ps1` and choose **Run with PowerShell**.
+1. Extract the ZIP first; do not run it from inside the ZIP preview.
+2. Double-click `Install-PCMedic.cmd`.
 3. If Windows asks, approve the administrator prompt.
+
+The installer verifies that all required application files reached Program
+Files before it creates shortcuts or reports success.
 
 If startup fails, PC Medic now keeps the error on screen and opens the saved
 log automatically. Startup logs are stored under `%ProgramData%\PCMedic\Logs`.

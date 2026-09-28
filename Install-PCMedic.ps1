@@ -10,7 +10,7 @@ trap {
     Set-Content -Path $errorFile -Value $errorText -Encoding UTF8
     [System.Windows.MessageBox]::Show("PC Medic could not be installed.`n`nThe error has been saved here:`n$errorFile`n`nThe log will open after you click OK.",'PC Medic installation error','OK','Error') | Out-Null
     Start-Process notepad.exe -ArgumentList ('"{0}"' -f $errorFile)
-    break
+    exit 1
 }
 if (-not ([Security.Principal.WindowsPrincipal][Security.Principal.WindowsIdentity]::GetCurrent()).IsInRole([Security.Principal.WindowsBuiltInRole]::Administrator)) {
     Start-Process powershell.exe -Verb RunAs -ArgumentList @('-NoProfile','-ExecutionPolicy','Bypass','-File',('"{0}"' -f $PSCommandPath))
@@ -18,9 +18,17 @@ if (-not ([Security.Principal.WindowsPrincipal][Security.Principal.WindowsIdenti
 }
 
 $source = $PSScriptRoot
-$target = Join-Path $env:ProgramFiles 'PC Medic'
+$programFilesRoot = [Environment]::GetFolderPath([Environment+SpecialFolder]::ProgramFiles)
+if ([string]::IsNullOrWhiteSpace($programFilesRoot)) { throw 'Windows did not return the Program Files location.' }
+$target = Join-Path $programFilesRoot 'PC Medic'
 New-Item -ItemType Directory -Path $target -Force | Out-Null
-Copy-Item (Join-Path $source '*') $target -Recurse -Force
+if (-not [IO.Path]::GetFullPath($source).TrimEnd('\').Equals([IO.Path]::GetFullPath($target).TrimEnd('\'),[StringComparison]::OrdinalIgnoreCase)) {
+    Copy-Item (Join-Path $source '*') $target -Recurse -Force
+}
+
+$requiredFiles = @('PCMedic.ps1','Launch-PCMedic.ps1','Update-PCMedic.ps1','PCMedic.vbs','VERSION.txt')
+$missingFiles = @($requiredFiles | Where-Object { -not (Test-Path (Join-Path $target $_) -PathType Leaf) })
+if ($missingFiles.Count) { throw ('Installation verification failed. Missing files: ' + ($missingFiles -join ', ') + ". Source folder: $source; target folder: $target") }
 
 $shell = New-Object -ComObject WScript.Shell
 $desktop = [Environment]::GetFolderPath('Desktop')
@@ -41,5 +49,5 @@ $uninstallShortcut.Arguments = '-NoProfile -ExecutionPolicy Bypass -File "' + (J
 $uninstallShortcut.WorkingDirectory = $target
 $uninstallShortcut.Save()
 
-[System.Windows.MessageBox]::Show('PC Medic is installed. A shortcut was added to your desktop and Start menu.','PC Medic','OK','Information') | Out-Null
+[System.Windows.MessageBox]::Show("PC Medic is installed and verified.`n`nInstalled at:`n$target`n`nShortcuts were added to your desktop and Start menu.",'PC Medic','OK','Information') | Out-Null
 Start-Process (Join-Path $env:WINDIR 'System32\wscript.exe') -ArgumentList ('"' + (Join-Path $target 'PCMedic.vbs') + '"')

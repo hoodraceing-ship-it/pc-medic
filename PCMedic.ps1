@@ -329,7 +329,7 @@ function Invoke-FullScan {
 
 function Export-Report {
     $stamp=Get-Date -Format 'yyyyMMdd-HHmmss'; $jsonPath=Join-Path $script:ReportRoot "PCMedic-$stamp.json"; $htmlPath=Join-Path $script:ReportRoot "PCMedic-$stamp.html"
-    $payload=[ordered]@{App='PC Medic';Version='1.6.0';Computer=$env:COMPUTERNAME;Started=$script:ScanStarted;Exported=Get-Date;Results=$script:Results}
+    $payload=[ordered]@{App='PC Medic';Version='1.6.1';Computer=$env:COMPUTERNAME;Started=$script:ScanStarted;Exported=Get-Date;Results=$script:Results}
     $payload|ConvertTo-Json -Depth 8|Set-Content $jsonPath -Encoding UTF8
     $rows=foreach($r in $script:Results){'<tr class="'+$r.Status.ToLower()+'"><td>'+[Web.HttpUtility]::HtmlEncode($r.Status)+'</td><td>'+[Web.HttpUtility]::HtmlEncode($r.Area)+'</td><td>'+[Web.HttpUtility]::HtmlEncode($r.Finding)+'</td><td>'+[Web.HttpUtility]::HtmlEncode($r.Recommendation)+'</td></tr>'}
     $html='<!doctype html><meta charset="utf-8"><title>PC Medic Report</title><style>body{font:15px Segoe UI;background:#0b1220;color:#e5e7eb;margin:35px}table{border-collapse:collapse;width:100%;background:#111827}th,td{padding:11px;border:1px solid #334155;text-align:left;vertical-align:top}.pass td:first-child{color:#4ade80}.warn td:first-child{color:#fbbf24}.fail td:first-child{color:#fb7185}.info td:first-child{color:#60a5fa}</style><h1>PC Medic Report</h1><p>'+[Web.HttpUtility]::HtmlEncode($env:COMPUTERNAME)+' - '+(Get-Date)+'</p><table><tr><th>Status</th><th>Area</th><th>Finding</th><th>Recommendation</th></tr>'+($rows-join '')+'</table>'
